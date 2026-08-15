@@ -94,3 +94,33 @@ def test_numerical_hpop_energy_conservation_two_body():
 
     relative_energy_error = abs(final_energy - init_energy) / abs(init_energy)
     assert relative_energy_error < 1e-6, f"Energy error too large: {relative_energy_error}"
+
+
+def test_space_weather_provider_scenarios():
+    """Verify SpaceWeatherProvider returns valid F10.7 and Ap for standard NOAA space weather scenarios."""
+    from aetheris.dynamics.space_weather import SpaceWeatherProvider, SpaceWeatherScenario
+
+    provider = SpaceWeatherProvider(use_live_feed=False)
+
+    quiet = provider.get_indices(scenario=SpaceWeatherScenario.QUIET_SUN)
+    assert quiet.f107_flux == 70.0
+    assert quiet.ap_geomagnetic_index == 4.0
+
+    storm = provider.get_indices(scenario=SpaceWeatherScenario.GEOMAGNETIC_STORM)
+    assert storm.f107_flux == 250.0
+    assert storm.ap_geomagnetic_index == 140.0
+
+
+def test_space_weather_historical_lookup():
+    """Verify SpaceWeatherProvider accurately returns historical Solar Cycle 24/25 indices."""
+    from aetheris.dynamics.space_weather import SpaceWeatherProvider
+
+    provider = SpaceWeatherProvider(use_live_feed=False)
+
+    # May 2024 Geomagnetic Storm peak
+    dt_may2024 = datetime(2024, 5, 10, tzinfo=timezone.utc)
+    indices = provider.get_indices(target_date=dt_may2024)
+
+    assert indices.f107_flux == 210.0
+    assert indices.ap_geomagnetic_index == 28.0
+    assert "HISTORICAL_SOLAR_CYCLE_TABLE_2024_05" in indices.source

@@ -2,6 +2,12 @@
 Dynamics & Astrodynamic Propagation Package for AETHERIS-ADR.
 """
 
+from aetheris.dynamics.space_weather import (
+    SpaceWeatherProvider,
+    SpaceWeatherIndices,
+    SpaceWeatherScenario,
+    SOLAR_CYCLE_LOOKUP
+)
 from aetheris.dynamics.atmospheric_models import (
     get_atmospheric_density,
     compute_drag_acceleration,
@@ -21,6 +27,10 @@ from aetheris.dynamics.conjunction import (
 )
 
 __all__ = [
+    "SpaceWeatherProvider",
+    "SpaceWeatherIndices",
+    "SpaceWeatherScenario",
+    "SOLAR_CYCLE_LOOKUP",
     "get_atmospheric_density",
     "compute_drag_acceleration",
     "ATMOSPHERE_TABLE",
