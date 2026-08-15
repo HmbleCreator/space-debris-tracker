@@ -147,8 +147,8 @@ def test_esa_e_deorbit_literature_comparison():
     assert abs(theo_dv - LITERATURE_ESA_E_DEORBIT.theoretical_unmargined_hohmann_dv_ms) < 0.5
 
     # 2. Check that propellant required for disposal alone is well within published total tank sizing (810-878 kg)
-    assert deorbit_res.propellant_required_kg < LITERATURE_ESA_E_DEORBIT.published_servicer_propellant_net_kg
-    assert deorbit_res.propellant_required_kg > 0
+    assert deorbit_res.propellant_mass_kg < LITERATURE_ESA_E_DEORBIT.published_servicer_propellant_net_kg
+    assert deorbit_res.propellant_mass_kg > 0
 
 
 def test_castronuovo_literature_drift_window_consistency():
