@@ -3,9 +3,9 @@ Aerospace ADR Literature Reference Scenarios and Internal Consistency Verificati
 
 Categories:
 1. Literature Reference Scenarios: Published mission numbers and qualitative bounds from peer-reviewed studies:
-   - ESA e.Deorbit Phase B1 Study (CDF-150(A)): 215 m/s operational deorbit budget for Envisat.
+   - ESA e.Deorbit CDF Study (CDF-135(A)) & Biesbroek et al. (2013): 215 m/s operational deorbit budget for Envisat.
    - Bombardelli & Peláez (2011) JGCD / arXiv:1102.1289: Qualitative claim that a 5-ton debris deorbits from 1000 km to 300 km in < 1 year.
-   - Castronuovo (2011) Acta Astronautica: Mission architecture allocating 20-65 days per target transfer using J2 drift.
+   - Castronuovo (2011) Acta Astronautica: Multi-target ADR mission architecture utilizing J2 nodal precession drift for multi-target tours.
 2. Internal Consistency Checks: Verification of coded closed-form astrodynamics derivations:
    - Relative formation acceleration equilibrium: F_p2 = F_p1 * (1 + eta_t * m_IBS / m_d) (Eq. 5).
    - Analytical two-body Hohmann perigee lowering Delta-V.
@@ -39,7 +39,7 @@ class CastronuovoLiteratureCase:
     target_inclination_deg: float
     target_mass_kg: float
     raan_separation_deg: float
-    published_mission_transfer_window_days_min: float # Study's operational transfer window [days]
+    published_mission_transfer_window_days_min: float # Multi-week operational transfer window [days]
     published_mission_transfer_window_days_max: float
     citation: str
     notes: str
@@ -63,7 +63,7 @@ class BombardelliPelaezLiteratureCase:
 
 # Case 1: ESA e.Deorbit Assessment Study (Envisat Controlled Reentry)
 LITERATURE_ESA_E_DEORBIT = ESALiteratureCase(
-    study_name="ESA e.Deorbit Phase B1 Study (CDF-150(A))",
+    study_name="ESA e.Deorbit CDF Study (CDF-135(A))",
     target_name="ENVISAT (NORAD 27386)",
     target_altitude_km=768.0,
     target_inclination_deg=98.54,
@@ -72,22 +72,22 @@ LITERATURE_ESA_E_DEORBIT = ESALiteratureCase(
     theoretical_unmargined_hohmann_dv_ms=201.45,  # Unmargined theoretical Hohmann burn to 45 km perigee
     published_servicer_dry_mass_kg=1400.0,
     published_isp_sec=320.0,
-    citation="ESA CDF-150(A) e.Deorbit Assessment Study Report (2015)",
+    citation="ESA CDF-135(A) e.Deorbit Study Report (2012) & Biesbroek et al. (2013), 6th European Conf. on Space Debris",
     notes="The published 215 m/s figure is an operational tank budget containing ~6.5% flight margin over theoretical minimum."
 )
 
-# Case 2: Castronuovo Multi-Target SL-16 ADR Analysis (Acta Astronautica 2011)
+# Case 2: Castronuovo Multi-Target ADR Analysis (Acta Astronautica 2011)
 LITERATURE_CASTRONUOVO_ADR = CastronuovoLiteratureCase(
     study_name="Castronuovo Multi-Target ADR Mission Analysis (Acta Astronautica 2011)",
-    target_name="Russian SL-16 / Cosmos-3M Upper Stage Cluster",
+    target_name="Sun-Synchronous / High-Inclination LEO Upper Stage Cluster",
     target_altitude_km=840.0,
     target_inclination_deg=71.0,
     target_mass_kg=9000.0,
     raan_separation_deg=12.5,
     published_mission_transfer_window_days_min=20.0,
     published_mission_transfer_window_days_max=65.0,
-    citation="Castronuovo, M. M. (2011). 'Active space debris removal: a preliminary mission analysis'. Acta Astronautica, 69(9-10), 848-859.",
-    notes="Castronuovo's campaign architecture bounds drift phase duration between 20-65 days per target to manage total campaign duration."
+    citation="Castronuovo, M. M. (2011). 'Active space debris removal: a preliminary mission analysis and design'. Acta Astronautica, 69(9-10), 848-859. DOI: 10.1016/j.actaastro.2011.04.017",
+    notes="Castronuovo's multi-target mission design evaluates nodal precession drift to connect non-coplanar Sun-synchronous targets within a multi-week transfer window per object."
 )
 
 # Case 3: Bombardelli & Peláez (2011) JGCD / arXiv:1102.1289 Section V
