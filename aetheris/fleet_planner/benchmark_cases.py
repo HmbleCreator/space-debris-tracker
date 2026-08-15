@@ -3,7 +3,7 @@ Aerospace ADR Literature Reference Scenarios and Internal Consistency Verificati
 
 Categories:
 1. Literature Reference Scenarios: Published mission numbers and qualitative bounds from peer-reviewed studies:
-   - ESA e.Deorbit CDF Study (CDF-135(A)) & Biesbroek et al. (2013): 215 m/s operational deorbit budget for Envisat.
+   - ESA e.Deorbit Study (Biesbroek et al., 2013): 8-tonne SSO class debris removal architecture.
    - Bombardelli & Peláez (2011) JGCD / arXiv:1102.1289: Qualitative claim that a 5-ton debris deorbits from 1000 km to 300 km in < 1 year.
    - Castronuovo (2011) Acta Astronautica: Multi-target ADR mission architecture utilizing J2 nodal precession drift for multi-target tours.
 2. Internal Consistency Checks: Verification of coded closed-form astrodynamics derivations:
@@ -23,10 +23,11 @@ class ESALiteratureCase:
     target_altitude_km: float
     target_inclination_deg: float
     target_mass_kg: float
-    published_operational_budget_dv_ms: float  # ESA total allocated deorbit budget including margin [m/s]
-    theoretical_unmargined_hohmann_dv_ms: float # Theoretical 2-body minimum [m/s]
-    published_servicer_dry_mass_kg: float
-    published_isp_sec: float
+    theoretical_unmargined_hohmann_dv_ms: float # Theoretical 2-body minimum to 45 km perigee [m/s]
+    published_servicer_dry_mass_net_kg: float    # Published net capture dry mass (709 kg)
+    published_servicer_propellant_net_kg: float  # Published net capture propellant mass (878 kg)
+    published_servicer_dry_mass_clamp_kg: float  # Published clamping dry mass (784 kg)
+    published_servicer_propellant_clamp_kg: float # Published clamping propellant mass (810 kg)
     citation: str
     notes: str
 
@@ -61,19 +62,20 @@ class BombardelliPelaezLiteratureCase:
     notes: str
 
 
-# Case 1: ESA e.Deorbit Assessment Study (Envisat Controlled Reentry)
+# Case 1: ESA e.Deorbit Assessment Study (Envisat / 8-Tonne SSO Debris Removal)
 LITERATURE_ESA_E_DEORBIT = ESALiteratureCase(
-    study_name="ESA e.Deorbit CDF Study (CDF-135(A))",
-    target_name="ENVISAT (NORAD 27386)",
+    study_name="ESA e.Deorbit CDF Assessment Study (Biesbroek et al., 2013)",
+    target_name="Representative 8-Tonne Sun-Synchronous Target (~770-800 km, 98.5°)",
     target_altitude_km=768.0,
     target_inclination_deg=98.54,
     target_mass_kg=8211.0,
-    published_operational_budget_dv_ms=215.0,     # ESA allocated tank budget with attitude/dispersion margin
-    theoretical_unmargined_hohmann_dv_ms=201.45,  # Unmargined theoretical Hohmann burn to 45 km perigee
-    published_servicer_dry_mass_kg=1400.0,
-    published_isp_sec=320.0,
-    citation="ESA CDF-135(A) e.Deorbit Study Report (2012) & Biesbroek et al. (2013), 6th European Conf. on Space Debris",
-    notes="The published 215 m/s figure is an operational tank budget containing ~6.5% flight margin over theoretical minimum."
+    theoretical_unmargined_hohmann_dv_ms=201.45,  # Theoretical 2-body Hohmann burn from 768 km to 45 km perigee
+    published_servicer_dry_mass_net_kg=709.0,     # Biesbroek et al. (2013) Table 1 net option
+    published_servicer_propellant_net_kg=878.0,   # Biesbroek et al. (2013) Table 1 net option
+    published_servicer_dry_mass_clamp_kg=784.0,   # Biesbroek et al. (2013) Table 1 clamping option
+    published_servicer_propellant_clamp_kg=810.0, # Biesbroek et al. (2013) Table 1 clamping option
+    citation="Biesbroek, R., Soares, T., Hüsing, J., & Innocenti, L. (2013). 'The e.Deorbit CDF Study: A Design Study for the Safe Removal of a Large Space Debris'. 6th European Conference on Space Debris, Darmstadt, Germany.",
+    notes="Theoretical perigee-lowering retro-burn to 45 km requires 201.45 m/s. The published study sizes an 810-878 kg propellant load covering the entire mission profile (rendezvous, capture, attitude control, and disposal burn with margin)."
 )
 
 # Case 2: Castronuovo Multi-Target ADR Analysis (Acta Astronautica 2011)

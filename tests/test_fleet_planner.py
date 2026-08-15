@@ -118,10 +118,9 @@ def test_fleet_optimizer_sizing():
 
 def test_esa_e_deorbit_literature_comparison():
     """
-    Comparison with ESA e.Deorbit Phase B1 Study (CDF-150(A)).
-    - Computes theoretical two-body unmargined Hohmann retro-burn (201.45 m/s).
-    - Compares with ESA's published 215.0 m/s total allocated operational budget,
-      verifying the +6.7% operational flight margin (attitude trim, dispersion allowance).
+    Comparison with ESA e.Deorbit Study (Biesbroek et al. 2013).
+    - Computes theoretical two-body unmargined Hohmann retro-burn (201.45 m/s) from 768 km to 45 km perigee.
+    - Compares with Biesbroek et al. (2013) published 8-tonne SSO servicer sizing (709-784 kg dry, 810-878 kg propellant).
     """
     from aetheris.disposal.chaser_propulsion import ChaserPropulsionEngine
     from aetheris.fleet_planner.benchmark_cases import LITERATURE_ESA_E_DEORBIT
@@ -137,21 +136,19 @@ def test_esa_e_deorbit_literature_comparison():
 
     deorbit_res = ChaserPropulsionEngine.compute_impulsive_retro_burn(
         current_orbit=envisat_orbit,
-        chaser_mass_kg=LITERATURE_ESA_E_DEORBIT.published_servicer_dry_mass_kg,
+        chaser_mass_kg=LITERATURE_ESA_E_DEORBIT.published_servicer_dry_mass_net_kg,
         target_mass_kg=LITERATURE_ESA_E_DEORBIT.target_mass_kg,
         target_perigee_alt_km=45.0,
-        isp_seconds=LITERATURE_ESA_E_DEORBIT.published_isp_sec
+        isp_seconds=320.0
     )
 
     # 1. Theoretical unmargined calculation
     theo_dv = deorbit_res.delta_v_required_ms
     assert abs(theo_dv - LITERATURE_ESA_E_DEORBIT.theoretical_unmargined_hohmann_dv_ms) < 0.5
 
-    # 2. Honest operational margin verification against ESA's published 215 m/s budget
-    published_budget = LITERATURE_ESA_E_DEORBIT.published_operational_budget_dv_ms
-    assert published_budget > theo_dv
-    margin_pct = ((published_budget - theo_dv) / theo_dv) * 100.0
-    assert 5.0 <= margin_pct <= 8.0, f"Operational margin {margin_pct:.1f}% outside typical 5-8% range"
+    # 2. Check that propellant required for disposal alone is well within published total tank sizing (810-878 kg)
+    assert deorbit_res.propellant_required_kg < LITERATURE_ESA_E_DEORBIT.published_servicer_propellant_net_kg
+    assert deorbit_res.propellant_required_kg > 0
 
 
 def test_castronuovo_literature_drift_window_consistency():
