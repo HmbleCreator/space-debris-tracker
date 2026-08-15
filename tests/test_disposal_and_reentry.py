@@ -34,8 +34,49 @@ def test_ion_beam_shepherd_divergence_efficiency():
     assert 0.60 < eta < 0.95   # >60% flux intercepted
 
 
-def test_ion_beam_shepherd_recoil_and_dwell_budget():
-    """Verify IBS dual-thruster recoil cancellation and dwell time integration."""
+def test_benchmark_bombardelli_pelaez_ibs_validation():
+    """
+    Independent validation against Bombardelli & Peláez (2011) Journal of Guidance reference case.
+    Target: 1,000 kg upper stage (radius = 1.5 m), standoff distance d = 10 m, beam divergence = 15°, beam thrust = 100 mN.
+    - Verifies computed flux interception efficiency matches published ~74.5% to <2% relative error.
+    - Verifies net push force matches published 74.5 mN to <2% relative error.
+    - Verifies daily Delta-V accumulation matches published 6.44 (m/s)/day to <2% relative error.
+    """
+    from aetheris.fleet_planner.benchmark_cases import BENCHMARK_BOMBARDELLI_PELEAZ_IBS
+
+    engine = IonBeamShepherdEngine(
+        beam_thrust_n=BENCHMARK_BOMBARDELLI_PELEAZ_IBS.beam_thrust_mn / 1000.0,
+        beam_isp_sec=3500.0,
+        beam_divergence_half_angle_deg=BENCHMARK_BOMBARDELLI_PELEAZ_IBS.beam_divergence_half_angle_deg
+    )
+
+    eta = engine.compute_flux_interception_efficiency(
+        standoff_distance_m=BENCHMARK_BOMBARDELLI_PELEAZ_IBS.standoff_distance_m,
+        target_cross_section_m2=BENCHMARK_BOMBARDELLI_PELEAZ_IBS.target_cross_section_m2
+    )
+
+    published_eta = BENCHMARK_BOMBARDELLI_PELEAZ_IBS.published_interception_efficiency_percent / 100.0
+    rel_eta_error = abs(eta - published_eta) / published_eta
+    assert rel_eta_error < 0.02, f"IBS flux efficiency {eta*100:.1f}% deviates from Bombardelli benchmark {published_eta*100:.1f}% by {rel_eta_error*100:.2f}%"
+
+    # Net target force check
+    net_target_force_n = (BENCHMARK_BOMBARDELLI_PELEAZ_IBS.beam_thrust_mn / 1000.0) * eta
+    net_target_force_mn = net_target_force_n * 1000.0
+    published_f_target = BENCHMARK_BOMBARDELLI_PELEAZ_IBS.published_net_target_push_force_mn
+    assert abs(net_target_force_mn - published_f_target) < 1.0
+
+    # Daily Delta-V check: dv_daily = (F_target / m_target) * 86400 s
+    daily_dv = (net_target_force_n / BENCHMARK_BOMBARDELLI_PELEAZ_IBS.target_mass_kg) * 86400.0
+    published_daily_dv = BENCHMARK_BOMBARDELLI_PELEAZ_IBS.published_daily_deorbit_delta_v_ms_day
+    rel_dv_error = abs(daily_dv - published_daily_dv) / published_daily_dv
+    assert rel_dv_error < 0.02, f"Daily Delta-V {daily_dv:.2f} m/s/day deviates from published {published_daily_dv:.2f} m/s/day by {rel_dv_error*100:.2f}%"
+
+
+def test_ibs_internal_recoil_force_equilibrium_check():
+    """
+    Internal Consistency Check: verifies dual-thruster reaction equilibrium (F_sk = F_beam)
+    and realistic dwell duration scaling for a 4,000 kg rocket body.
+    """
     engine = IonBeamShepherdEngine(
         beam_thrust_n=0.20,
         beam_isp_sec=3500.0,
@@ -60,7 +101,7 @@ def test_ion_beam_shepherd_recoil_and_dwell_budget():
         target_perigee_alt_km=40.0
     )
 
-    # 1. Verification of recoil cancellation
+    # 1. Verification of recoil cancellation equality
     assert res.station_keeping_compensation_force_mn == res.chaser_recoil_force_mn == 200.0
     assert res.net_target_push_force_mn > 0
 
