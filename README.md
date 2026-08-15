@@ -87,19 +87,28 @@ python -m pytest tests/ -v
 
 ## 🛰️ REST API Endpoints
 
-## 🔬 Peer-Reviewed External Benchmark Validation Matrix
+## 📚 1. Literature Scenario Comparisons
 
-| Benchmark Source | Target & Scenario | Metric Tested | Published Value | AETHERIS-ADR Result | Deviation | Status |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **ESA e.Deorbit Phase B1 (CDF-150(A))** | ENVISAT ($768\text{ km}, 98.54^\circ$) to $45\text{ km}$ perigee | Unmargined Nominal Hohmann Retro-Burn $\Delta v$ | $201.4\text{ m/s}$ | $201.45\text{ m/s}$ | **$0.02\%$** | **VERIFIED** |
-| **ESA e.Deorbit Phase B1** | ENVISAT Deorbit Budget | Operational Thruster/Attitude Margin Delta | $+6.5\%$ ($215.0\text{ m/s}$) | Margined budget matches $+6.5\%$ operational delta | $0.00\%$ | **VERIFIED** |
-| **Castronuovo (2011) Table 3** | SL-16 Cluster ($840\text{ km}, 71.0^\circ, \Delta \Omega = 12.5^\circ$) | Upper Drift Orbit ($1050\text{ km}$) Precession Rate $\Delta \dot{\Omega}$ | $+0.201^\circ/\text{day}$ ($T = 62.2\text{ d}$) | $+0.201^\circ/\text{day}$ ($T = 62.2\text{ d}$) | **$< 0.1\%$** | **VERIFIED** |
-| **Castronuovo (2011) Table 3** | SL-16 Cluster ($840\text{ km}, 71.0^\circ, \Delta \Omega = 12.5^\circ$) | Lower Drift Orbit ($600\text{ km}$) Precession Rate $\Delta \dot{\Omega}$ | $-0.264^\circ/\text{day}$ ($T = 47.3\text{ d}$) | $-0.264^\circ/\text{day}$ ($T = 47.3\text{ d}$) | **$< 0.1\%$** | **VERIFIED** |
-| **Bombardelli & Peláez (2011) Sec. V / Fig. 2** | 5-Ton Debris ($1000\text{ km} \to 300\text{ km}, F_{\text{target}} = 70\text{ mN}$) | Continuous Transfer $\Delta v$ | $375.62\text{ m/s}$ | $375.62\text{ m/s}$ | **$< 0.01\%$** | **VERIFIED** |
-| **Bombardelli & Peláez (2011) Sec. V / Fig. 2** | 5-Ton Debris ($1000\text{ km} \to 300\text{ km}, F_{\text{target}} = 70\text{ mN}$) | Transfer Duration ($T_{\text{transfer}}$) | $310.5\text{ days}$ ($< 1\text{ yr}$) | $310.5\text{ days}$ | **$< 0.01\%$** | **VERIFIED** |
-| **Bombardelli & Peláez (2011) Eq. 5** | Formation Equilibrium ($m_{\text{IBS}} = 300\text{ kg}, m_d = 5000\text{ kg}$) | Secondary Thruster Force ($F_{p2}$) | $104.2\text{ mN}$ | $104.2\text{ mN}$ | **$< 0.01\%$** | **VERIFIED** |
+Comparisons against published study parameters and qualitative findings from aerospace literature:
+
+| Literature Source | Scenario / Target | Published Literature Value / Finding | AETHERIS-ADR Result | Comparative Finding / Interpretation | Status |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **ESA e.Deorbit Phase B1 (CDF-150(A))** | ENVISAT ($768\text{ km}, 98.54^\circ$) to $45\text{ km}$ perigee | **$215.0\text{ m/s}$** allocated operational budget | **$201.45\text{ m/s}$** (theoretical minimum) | Our theoretical $\Delta v$ sits **$6.7\%$ below** ESA's allocated figure, reflecting ESA's operational flight margin (attitude trim, dispersion allowance). | **CONSISTENT** |
+| **Bombardelli & Peláez (2011) Section V** | 5-ton ($5000\text{ kg}$) object ($1000\text{ km} \to 300\text{ km}, 70\text{ mN}$ net) | Qualitatively bounds deorbit time: **"in less than one year"** | **$310.5\text{ days}$** ($0.85\text{ years}$) | Predicted transfer duration satisfies the published upper bound of $< 1\text{ year}$. | **CONSISTENT** |
+| **Castronuovo (2011) *Acta Astronautica*** | Multi-target LEO cluster ($840\text{ km}, 71.0^\circ, \Delta \Omega = 12.5^\circ$) | Campaign architecture allocates **$20\text{--}65\text{ days}$** per target transfer | **$47.3\text{--}62.2\text{ days}$** ($J_2$ drift phase) | Transfer duration fits within the multi-week operational window, achieving **$81.5\%$ propellant savings** on this specific cluster. | **CONSISTENT** |
 
 > **Parameter Specificity Note on Propellant Savings**: The reported **$81.5\%$ propellant savings** is computed specifically for representative high-inclination Russian Upper Stage pairs ($840\text{ km}, 71.0^\circ, \Delta \Omega = 12.5^\circ$) where $J_2$ differential nodal drift saves $> 1200\text{ m/s}$ compared to direct impulsive plane changes. Savings will vary with target inclination and RAAN separation.
+
+## ⚙️ 2. Internal Formula Verifications & Conservation Checks
+
+Automated unit tests validating that our codebase correctly executes mathematical derivations:
+
+| Verification Target | Physics / Governing Equation | Test Condition | Model Implementation Result | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **Secondary Formation Equilibrium (Eq. 5)** | $F_{p2} = F_{p1} \left( 1 + \eta_t \frac{m_{\text{IBS}}}{m_d} \right)$ | $m_{\text{IBS}} = 500\text{ kg}, m_d = 1000\text{ kg}, F_{p1} = 200\text{ mN}$ | $F_{p2} = 300\text{ mN} \implies a_{\text{IBS}} = a_d = 1.0 \times 10^{-4}\text{ m/s}^2$ | **VERIFIED (0.00% Formation Drift)** |
+| **Two-Body Vis-Viva Integration** | $v = \sqrt{\mu \left(\frac{2}{r} - \frac{1}{a}\right)}$ | Circular $768\text{ km}$ to $45\text{ km}$ perigee | $\Delta v_{\text{retro}} = 201.45\text{ m/s}$ | **VERIFIED** |
+| **Continuous Tangential Spiral $\Delta v$** | $\Delta v = \|v(r_2) - v(r_1)\|$ | Circular $1000\text{ km}$ to $300\text{ km}$ | $\Delta v = 375.62\text{ m/s}$ | **VERIFIED** |
+| **$J_2$ Secular Nodal Drift Rate** | $\dot{\Omega} = -\frac{3}{2} J_2 \left(\frac{R_E}{p}\right)^2 \bar{n} \cos i$ | Circular $840\text{ km}, 71.0^\circ$ | $\dot{\Omega} = -2.104^\circ/\text{day}$ | **VERIFIED** |
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |

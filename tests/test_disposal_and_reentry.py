@@ -40,57 +40,40 @@ def test_ion_beam_shepherd_divergence_efficiency():
     assert eta_5m == 1.0         # 100% inside d_max
 
 
-def test_benchmark_bombardelli_pelaez_ibs_validation():
+def test_bombardelli_pelaez_qualitative_bound_consistency():
     """
-    Independent validation against Bombardelli & Peláez (2011) Section V / Figure 2 published worked example.
-    Deorbit of 5-ton (5,000 kg) debris from 1000 km to 300 km circular orbit using a 100 mN beam with 70% effective force (70 mN).
-    - Verifies continuous tangential Delta-V = 375.62 m/s.
-    - Verifies transfer duration T = 310.5 days (< 1 year), matching published Figure 2.
-    - Verifies secondary thruster force F_p2 = 104.2 mN from Eq. 5 (F_p2 = F_p1 * (1 + eta_t * m_IBS / m_d)).
+    Consistency check against Bombardelli & Peláez (2011) Section V qualitative bound.
+    The paper states that a 5-ton debris object at 1000 km can be transferred to 300 km "in less than one year"
+    using a 100 mN / 70% effective force (70 mN) beam.
+    - Our model predicts 310.5 days, which is strictly consistent with the published < 1 year bound.
     """
     from aetheris.core.constants import MU_EARTH, R_EARTH
-    from aetheris.fleet_planner.benchmark_cases import BENCHMARK_BOMBARDELLI_PELEAZ_IBS
+    from aetheris.fleet_planner.benchmark_cases import LITERATURE_BOMBARDELLI_PELEAZ_IBS
 
-    bm = BENCHMARK_BOMBARDELLI_PELEAZ_IBS
+    case = LITERATURE_BOMBARDELLI_PELEAZ_IBS
 
     # 1. Theoretical circular velocity Delta-V from 1000 km to 300 km
-    r1 = R_EARTH + bm.initial_altitude_km * 1000.0
-    r2 = R_EARTH + bm.final_altitude_km * 1000.0
+    r1 = R_EARTH + case.initial_altitude_km * 1000.0
+    r2 = R_EARTH + case.final_altitude_km * 1000.0
     v1 = math.sqrt(MU_EARTH / r1)
     v2 = math.sqrt(MU_EARTH / r2)
     delta_v_calc = abs(v2 - v1)
 
-    assert abs(delta_v_calc - bm.published_transfer_delta_v_ms) < 0.1
-
     # 2. Transfer duration under 70 mN effective thrust
-    f_target_n = bm.effective_target_thrust_mn / 1000.0
-    t_transfer_sec = (bm.target_mass_kg * delta_v_calc) / f_target_n
+    f_target_n = case.effective_target_thrust_mn / 1000.0
+    t_transfer_sec = (case.target_mass_kg * delta_v_calc) / f_target_n
     t_transfer_days = t_transfer_sec / 86400.0
 
-    assert abs(t_transfer_days - bm.published_transfer_duration_days) < 0.5
-    assert t_transfer_days < 365.25  # Published claim: deorbits in under 1 year
-
-    # 3. Secondary thruster equilibrium force from Eq. 5
-    engine = IonBeamShepherdEngine(
-        beam_thrust_n=bm.beam_thrust_mn / 1000.0,
-        nominal_chaser_mass_kg=bm.shepherd_mass_kg
-    )
-    eta_t = bm.effective_target_thrust_mn / bm.beam_thrust_mn  # 0.70
-    f_p2_n = engine.compute_secondary_thruster_thrust(
-        primary_thrust_n=bm.beam_thrust_mn / 1000.0,
-        interception_efficiency=eta_t,
-        chaser_mass_kg=bm.shepherd_mass_kg,
-        target_mass_kg=bm.target_mass_kg
-    )
-    f_p2_mn = f_p2_n * 1000.0
-    assert abs(f_p2_mn - bm.published_secondary_thruster_mn) < 0.1
+    # Assert model result is consistent with published qualitative bound (< 1 year / 365.25 days)
+    assert t_transfer_days < case.published_max_duration_days
+    assert 280.0 <= t_transfer_days <= 340.0  # Approx 310.5 days (0.85 years)
 
 
 def test_ibs_secondary_thruster_formation_acceleration_equilibrium():
     """
-    Physics Verification of Bombardelli & Peláez (2011) Eq. 5 formation acceleration matching:
+    Internal Formula Verification: Bombardelli & Peláez (2011) Eq. 5 relative acceleration matching.
+    Verifies that setting F_p2 = F_p1 * (1 + eta_t * m_IBS / m_d) ensures zero formation drift:
     a_IBS = (F_p2 - F_p1) / m_IBS == F_target / m_d == a_target.
-    Tests significant non-negligible shepherd mass (e.g. m_IBS = 500 kg next to m_d = 1,000 kg).
     """
     engine = IonBeamShepherdEngine(
         beam_thrust_n=0.20,              # 200 mN
