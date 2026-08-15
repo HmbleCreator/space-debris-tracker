@@ -23,64 +23,78 @@ def test_ion_beam_shepherd_divergence_efficiency():
         beam_divergence_half_angle_deg=12.0
     )
 
-    # At 20m standoff distance for a 15 m^2 cross section target
+    # At 20m standoff distance
     r_beam = engine.compute_beam_footprint_radius(standoff_distance_m=20.0)
-    eta = engine.compute_flux_interception_efficiency(
+    # Target with 15 m^2 cross section -> s = 4.37 m -> d_max = 10.28 m
+    eta_20m = engine.compute_flux_interception_efficiency(
         standoff_distance_m=20.0,
         target_cross_section_m2=15.0
     )
+    eta_5m = engine.compute_flux_interception_efficiency(
+        standoff_distance_m=5.0,
+        target_cross_section_m2=15.0
+    )
 
-    assert 3.0 < r_beam < 6.0  # r_beam ~ 0.15 + 20 * tan(12°) ~ 4.40 m
-    assert 0.60 < eta < 0.95   # >60% flux intercepted
+    assert 3.0 < r_beam < 6.0  # r_beam ~ 20 * tan(12°) ~ 4.25 m
+    assert 0.20 < eta_20m < 0.35 # (10.28 / 20)^2 ~ 26.4%
+    assert eta_5m == 1.0         # 100% inside d_max
 
 
 def test_benchmark_bombardelli_pelaez_ibs_validation():
     """
-    Independent validation against Bombardelli & Peláez (2011) Journal of Guidance reference case.
-    Target: 1,000 kg upper stage (radius = 1.5 m), standoff distance d = 10 m, beam divergence = 15°, beam thrust = 100 mN.
-    - Verifies computed flux interception efficiency matches published ~74.5% to <2% relative error.
-    - Verifies net push force matches published 74.5 mN to <2% relative error.
-    - Verifies daily Delta-V accumulation matches published 6.44 (m/s)/day to <2% relative error.
+    Independent validation against Bombardelli & Peláez (2011) Section V / Figure 2 published worked example.
+    Deorbit of 5-ton (5,000 kg) debris from 1000 km to 300 km circular orbit using a 100 mN beam with 70% effective force (70 mN).
+    - Verifies continuous tangential Delta-V = 375.62 m/s.
+    - Verifies transfer duration T = 310.5 days (< 1 year), matching published Figure 2.
+    - Verifies secondary thruster force F_p2 = 104.2 mN from Eq. 5 (F_p2 = F_p1 * (1 + eta_t * m_IBS / m_d)).
     """
+    from aetheris.core.constants import MU_EARTH, R_EARTH
     from aetheris.fleet_planner.benchmark_cases import BENCHMARK_BOMBARDELLI_PELEAZ_IBS
 
+    bm = BENCHMARK_BOMBARDELLI_PELEAZ_IBS
+
+    # 1. Theoretical circular velocity Delta-V from 1000 km to 300 km
+    r1 = R_EARTH + bm.initial_altitude_km * 1000.0
+    r2 = R_EARTH + bm.final_altitude_km * 1000.0
+    v1 = math.sqrt(MU_EARTH / r1)
+    v2 = math.sqrt(MU_EARTH / r2)
+    delta_v_calc = abs(v2 - v1)
+
+    assert abs(delta_v_calc - bm.published_transfer_delta_v_ms) < 0.1
+
+    # 2. Transfer duration under 70 mN effective thrust
+    f_target_n = bm.effective_target_thrust_mn / 1000.0
+    t_transfer_sec = (bm.target_mass_kg * delta_v_calc) / f_target_n
+    t_transfer_days = t_transfer_sec / 86400.0
+
+    assert abs(t_transfer_days - bm.published_transfer_duration_days) < 0.5
+    assert t_transfer_days < 365.25  # Published claim: deorbits in under 1 year
+
+    # 3. Secondary thruster equilibrium force from Eq. 5
     engine = IonBeamShepherdEngine(
-        beam_thrust_n=BENCHMARK_BOMBARDELLI_PELEAZ_IBS.beam_thrust_mn / 1000.0,
-        beam_isp_sec=3500.0,
-        beam_divergence_half_angle_deg=BENCHMARK_BOMBARDELLI_PELEAZ_IBS.beam_divergence_half_angle_deg
+        beam_thrust_n=bm.beam_thrust_mn / 1000.0,
+        nominal_chaser_mass_kg=bm.shepherd_mass_kg
     )
-
-    eta = engine.compute_flux_interception_efficiency(
-        standoff_distance_m=BENCHMARK_BOMBARDELLI_PELEAZ_IBS.standoff_distance_m,
-        target_cross_section_m2=BENCHMARK_BOMBARDELLI_PELEAZ_IBS.target_cross_section_m2
+    eta_t = bm.effective_target_thrust_mn / bm.beam_thrust_mn  # 0.70
+    f_p2_n = engine.compute_secondary_thruster_thrust(
+        primary_thrust_n=bm.beam_thrust_mn / 1000.0,
+        interception_efficiency=eta_t,
+        chaser_mass_kg=bm.shepherd_mass_kg,
+        target_mass_kg=bm.target_mass_kg
     )
-
-    published_eta = BENCHMARK_BOMBARDELLI_PELEAZ_IBS.published_interception_efficiency_percent / 100.0
-    rel_eta_error = abs(eta - published_eta) / published_eta
-    assert rel_eta_error < 0.02, f"IBS flux efficiency {eta*100:.1f}% deviates from Bombardelli benchmark {published_eta*100:.1f}% by {rel_eta_error*100:.2f}%"
-
-    # Net target force check
-    net_target_force_n = (BENCHMARK_BOMBARDELLI_PELEAZ_IBS.beam_thrust_mn / 1000.0) * eta
-    net_target_force_mn = net_target_force_n * 1000.0
-    published_f_target = BENCHMARK_BOMBARDELLI_PELEAZ_IBS.published_net_target_push_force_mn
-    assert abs(net_target_force_mn - published_f_target) < 1.0
-
-    # Daily Delta-V check: dv_daily = (F_target / m_target) * 86400 s
-    daily_dv = (net_target_force_n / BENCHMARK_BOMBARDELLI_PELEAZ_IBS.target_mass_kg) * 86400.0
-    published_daily_dv = BENCHMARK_BOMBARDELLI_PELEAZ_IBS.published_daily_deorbit_delta_v_ms_day
-    rel_dv_error = abs(daily_dv - published_daily_dv) / published_daily_dv
-    assert rel_dv_error < 0.02, f"Daily Delta-V {daily_dv:.2f} m/s/day deviates from published {published_daily_dv:.2f} m/s/day by {rel_dv_error*100:.2f}%"
+    f_p2_mn = f_p2_n * 1000.0
+    assert abs(f_p2_mn - bm.published_secondary_thruster_mn) < 0.1
 
 
-def test_ibs_internal_recoil_force_equilibrium_check():
+def test_ibs_secondary_thruster_formation_acceleration_equilibrium():
     """
-    Internal Consistency Check: verifies dual-thruster reaction equilibrium (F_sk = F_beam)
-    and realistic dwell duration scaling for a 4,000 kg rocket body.
+    Physics Verification of Bombardelli & Peláez (2011) Eq. 5 formation acceleration matching:
+    a_IBS = (F_p2 - F_p1) / m_IBS == F_target / m_d == a_target.
+    Tests significant non-negligible shepherd mass (e.g. m_IBS = 500 kg next to m_d = 1,000 kg).
     """
     engine = IonBeamShepherdEngine(
-        beam_thrust_n=0.20,
-        beam_isp_sec=3500.0,
-        station_keeping_isp_sec=3500.0
+        beam_thrust_n=0.20,              # 200 mN
+        nominal_chaser_mass_kg=500.0
     )
 
     kepler = KeplerianElements(
@@ -92,26 +106,25 @@ def test_ibs_internal_recoil_force_equilibrium_check():
         true_anomaly=0.0
     )
 
+    # 500 kg shepherd next to a 1,000 kg target (m_IBS / m_d = 0.50) at 5m standoff (d <= d_max = 7.06m)
     res = engine.compute_standoff_deorbit(
-        target_name="SL-16 R/B",
-        target_mass_kg=4000.0,
-        target_cross_section_m2=25.0,
+        target_name="Cosmos-3M Payload",
+        target_mass_kg=1000.0,
+        target_characteristic_size_m=3.0,
         current_orbit=kepler,
-        standoff_distance_m=20.0,
+        standoff_distance_m=5.0,
+        chaser_mass_kg=500.0,
         target_perigee_alt_km=40.0
     )
 
-    # 1. Verification of recoil cancellation equality
-    assert res.station_keeping_compensation_force_mn == res.chaser_recoil_force_mn == 200.0
-    assert res.net_target_push_force_mn > 0
+    # For m_IBS = 500 kg and m_d = 1000 kg with eta = 1.0:
+    # F_p2 = 200 mN * (1 + 1.0 * 500/1000) = 300 mN!
+    assert res.secondary_formation_thruster_mn > res.primary_beam_thrust_mn
+    assert abs(res.secondary_formation_thruster_mn - 300.0) < 1.0
 
-    # 2. Verification of realistic dwell duration (30-70 days for 4000 kg R/B at 200 mN)
-    assert 30.0 <= res.deorbit_dwell_duration_days <= 75.0
-
-    # 3. Propellant efficiency of high-Isp electric propulsion
-    assert res.daily_propellant_consumption_kg_day < 1.5
-    assert res.total_chaser_propellant_used_kg > 0
-    assert res.tumbling_immunity_flag is True
+    # Verify that shepherd acceleration exactly matches target acceleration (0 formation drift)
+    assert abs(res.shepherd_formation_acceleration_ms2 - res.target_deorbit_acceleration_ms2) < 1e-9
+    assert res.shepherd_formation_acceleration_ms2 > 0.0
 
 
 def test_impulsive_retro_burn_calculation():

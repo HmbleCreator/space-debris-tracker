@@ -237,7 +237,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       document.getElementById('ibs-eta').textContent = `${data.flux_interception_efficiency_percent}%`;
       document.getElementById('ibs-net-push').textContent = `${data.net_target_push_force_mn} mN`;
-      document.getElementById('ibs-recoil').textContent = `${data.station_keeping_compensation_force_mn} mN`;
+      document.getElementById('ibs-recoil').textContent = `${data.secondary_formation_thruster_mn} mN (Eq. 5)`;
       document.getElementById('ibs-dwell-days').textContent = `${data.deorbit_dwell_duration_days} Days`;
       document.getElementById('ibs-daily-prop').textContent = `${data.daily_propellant_consumption_kg_day} kg/day`;
       document.getElementById('ibs-total-prop').textContent = `${data.total_chaser_propellant_used_kg} kg`;

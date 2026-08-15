@@ -117,14 +117,16 @@ def test_api_ion_beam_shepherd():
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             res = await client.post("/api/reentry/ion_beam_shepherd", json={
                 "norad_id": 27386,  # ENVISAT
-                "standoff_distance_m": 25.0,
+                "standoff_distance_m": 10.0,
                 "beam_thrust_mn": 250.0
             })
             assert res.status_code == 200
             data = res.json()
             assert data["target_name"] == "ENVISAT"
-            assert data["flux_interception_efficiency_percent"] > 50.0
-            assert data["chaser_recoil_force_mn"] == data["station_keeping_compensation_force_mn"] == 250.0
+            assert data["flux_interception_efficiency_percent"] >= 95.0
+            assert data["primary_beam_thrust_mn"] == 250.0
+            assert data["secondary_formation_thruster_mn"] >= 250.0
+            assert abs(data["shepherd_formation_acceleration_ms2"] - data["target_deorbit_acceleration_ms2"]) < 1e-9
             assert data["deorbit_dwell_duration_days"] > 0
             assert data["tumbling_immunity_flag"] is True
     _run_async(_test())

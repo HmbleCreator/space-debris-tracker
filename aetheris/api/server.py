@@ -6,6 +6,7 @@ Provides RESTful endpoints and WebSocket streaming for real-time astrodynamics, 
 import asyncio
 from datetime import datetime, timezone
 import json
+import math
 import os
 from typing import Dict, List, Optional
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
@@ -362,10 +363,13 @@ async def compute_ion_beam_shepherd_deorbit(req: IonBeamShepherdRequest):
         station_keeping_isp_sec=req.station_keeping_isp_seconds
     )
 
+    # Approximate characteristic dimension s from cross section: s = 2 * sqrt(A / pi)
+    char_size_m = 2.0 * math.sqrt(max(0.1, obj.cross_sectional_area_m2) / math.pi)
+
     res = engine.compute_standoff_deorbit(
         target_name=obj.name,
         target_mass_kg=obj.estimated_mass_kg,
-        target_cross_section_m2=obj.cross_sectional_area_m2,
+        target_characteristic_size_m=char_size_m,
         current_orbit=obj.keplerian,
         standoff_distance_m=req.standoff_distance_m,
         target_perigee_alt_km=req.target_perigee_km
@@ -374,15 +378,18 @@ async def compute_ion_beam_shepherd_deorbit(req: IonBeamShepherdRequest):
     return {
         "target_name": res.target_name,
         "target_mass_kg": res.target_mass_kg,
-        "target_cross_section_m2": res.target_cross_section_m2,
+        "target_characteristic_size_m": res.target_characteristic_size_m,
+        "chaser_mass_kg": res.chaser_mass_kg,
         "standoff_distance_m": res.standoff_distance_m,
+        "max_standoff_distance_for_full_intercept_m": res.max_standoff_distance_for_full_intercept_m,
         "beam_divergence_half_angle_deg": res.beam_divergence_half_angle_deg,
-        "beam_footprint_radius_m": res.beam_footprint_radius_m,
         "flux_interception_efficiency_percent": res.flux_interception_efficiency_percent,
-        "nominal_beam_thrust_mn": res.nominal_beam_thrust_mn,
+        "primary_beam_thrust_mn": res.primary_beam_thrust_mn,
         "net_target_push_force_mn": res.net_target_push_force_mn,
-        "chaser_recoil_force_mn": res.chaser_recoil_force_mn,
-        "station_keeping_compensation_force_mn": res.station_keeping_compensation_force_mn,
+        "secondary_formation_thruster_mn": res.secondary_formation_thruster_mn,
+        "chaser_recoil_rebound_force_mn": res.chaser_recoil_rebound_force_mn,
+        "shepherd_formation_acceleration_ms2": res.shepherd_formation_acceleration_ms2,
+        "target_deorbit_acceleration_ms2": res.target_deorbit_acceleration_ms2,
         "delta_v_target_required_ms": res.delta_v_target_required_ms,
         "deorbit_dwell_duration_days": res.deorbit_dwell_duration_days,
         "daily_propellant_consumption_kg_day": res.daily_propellant_consumption_kg_day,
