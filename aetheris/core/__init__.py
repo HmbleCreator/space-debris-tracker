@@ -1,0 +1,101 @@
+"""
+Astrodynamics Core Package for AETHERIS-ADR.
+"""
+
+from aetheris.core.constants import (
+    MU_EARTH,
+    MU_EARTH_KM3,
+    R_EARTH,
+    R_EARTH_KM,
+    R_EARTH_POLAR,
+    FLATTENING_EARTH,
+    OMEGA_EARTH,
+    G0,
+    J2,
+    J3,
+    J4,
+    J5,
+    J6,
+    AU_METERS,
+    SPEED_OF_LIGHT,
+    SOLAR_RADIATION_PRESSURE_1AU,
+    REENTRY_INTERFACE_ALT_KM,
+    REENTRY_INTERFACE_ALT_M,
+    RHO_0,
+    C_DKR,
+    CASUALTY_RISK_THRESHOLD,
+    CASUALTY_AREA_LIMIT_M2,
+    CRITICAL_IMPACT_KINETIC_ENERGY_J,
+    POINT_NEMO_LAT_DEG,
+    POINT_NEMO_LON_DEG,
+    SPOUA_CORRIDOR_POLYGON,
+    MATERIAL_DATABASE,
+    MaterialProperties
+)
+from aetheris.core.coordinates import (
+    datetime_to_julian_date,
+    julian_date_to_gmst,
+    eci_to_ecef,
+    ecef_to_eci,
+    ecef_to_geodetic,
+    geodetic_to_ecef,
+    eci_to_geodetic
+)
+from aetheris.core.orbital_elements import (
+    KeplerianElements,
+    cartesian_to_keplerian,
+    keplerian_to_cartesian,
+    solve_kepler_eccentric_anomaly,
+    eccentric_anomaly_to_true_anomaly,
+    true_anomaly_to_mean_anomaly
+)
+from aetheris.core.lambert import (
+    LambertSolution,
+    solve_lambert
+)
+
+__all__ = [
+    "MU_EARTH",
+    "MU_EARTH_KM3",
+    "R_EARTH",
+    "R_EARTH_KM",
+    "R_EARTH_POLAR",
+    "FLATTENING_EARTH",
+    "OMEGA_EARTH",
+    "G0",
+    "J2",
+    "J3",
+    "J4",
+    "J5",
+    "J6",
+    "AU_METERS",
+    "SPEED_OF_LIGHT",
+    "SOLAR_RADIATION_PRESSURE_1AU",
+    "REENTRY_INTERFACE_ALT_KM",
+    "REENTRY_INTERFACE_ALT_M",
+    "RHO_0",
+    "C_DKR",
+    "CASUALTY_RISK_THRESHOLD",
+    "CASUALTY_AREA_LIMIT_M2",
+    "CRITICAL_IMPACT_KINETIC_ENERGY_J",
+    "POINT_NEMO_LAT_DEG",
+    "POINT_NEMO_LON_DEG",
+    "SPOUA_CORRIDOR_POLYGON",
+    "MATERIAL_DATABASE",
+    "MaterialProperties",
+    "datetime_to_julian_date",
+    "julian_date_to_gmst",
+    "eci_to_ecef",
+    "ecef_to_eci",
+    "ecef_to_geodetic",
+    "geodetic_to_ecef",
+    "eci_to_geodetic",
+    "KeplerianElements",
+    "cartesian_to_keplerian",
+    "keplerian_to_cartesian",
+    "solve_kepler_eccentric_anomaly",
+    "eccentric_anomaly_to_true_anomaly",
+    "true_anomaly_to_mean_anomaly",
+    "LambertSolution",
+    "solve_lambert",
+]

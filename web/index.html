@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AETHERIS-ADR | Autonomous Space Debris Tracking & Fleet Mission Control</title>
+  <meta name="description" content="Production-grade astrodynamics engine for real-time space debris tracking, Kessler cascade mitigation, autonomous robotic fleet routing, and Point Nemo targeted deorbit operations.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <!-- Three.js and OrbitControls via CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <!-- Chart.js for telemetry & demise curves -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div id="app-container">
+    <!-- Top Navigation Header -->
+    <header class="app-header">
+      <div class="brand-section">
+        <div class="logo-icon">
+          <div class="orbit-ring"></div>
+          <div class="core-dot"></div>
+        </div>
+        <div class="brand-text">
+          <h1>AETHERIS<span>-ADR</span></h1>
+          <p class="tagline">Autonomous Ephemeris Tracking & Active Debris Interception Mission Ops</p>
+        </div>
+      </div>
+
+      <div class="system-status-pills">
+        <div class="status-pill active" id="status-propagator">
+          <span class="pulse-indicator green"></span>
+          <span>SGP4 / HPOP: <strong id="val-prop-status">ONLINE (0.4ms)</strong></span>
+        </div>
+        <div class="status-pill" id="status-catalog">
+          <span class="pill-icon">🛰️</span>
+          <span>CATALOG: <strong id="val-catalog-count">458 OBJECTS</strong></span>
+        </div>
+        <div class="status-pill alert" id="status-critical-count">
+          <span class="pulse-indicator red"></span>
+          <span>CRITICAL TARGETS: <strong id="val-critical-count">18 DETECTED</strong></span>
+        </div>
+        <div class="status-pill" id="status-clock">
+          <span class="pill-icon">⏱️</span>
+          <span id="utc-clock">UTC 00:00:00</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Workspace Layout -->
+    <div class="main-layout">
+      <!-- Left Sidebar: Catalog & Priority Queue -->
+      <aside class="sidebar-left">
+        <div class="panel-header">
+          <h2><span>PRIORITIZED DEBRIS QUEUE</span></h2>
+          <span class="badge red">KESSLER CRITICALITY</span>
+        </div>
+
+        <div class="search-filter-box">
+          <input type="text" id="debris-search" placeholder="Search ID, Name (e.g., ENVISAT, SL-16)..." />
+          <div class="filter-chips">
+            <button class="chip active" data-filter="ALL">ALL</button>
+            <button class="chip" data-filter="ROCKET_BODY">ROCKET BODIES</button>
+            <button class="chip" data-filter="PAYLOAD">PAYLOADS</button>
+            <button class="chip" data-filter="FRAGMENTATION_DEBRIS">FRAGMENTS</button>
+          </div>
+        </div>
+
+        <div class="debris-list-container" id="debris-list-container">
+          <div class="loading-spinner">Loading Ephemeris Catalog...</div>
+        </div>
+      </aside>
+
+      <!-- Center: 3D Earth Orbit Viewport -->
+      <main class="viewport-center">
+        <div id="three-canvas-container"></div>
+
+        <!-- 3D HUD Overlay Controls -->
+        <div class="viewport-hud-top">
+          <div class="hud-stat-box">
+            <span class="label">SELECTED TARGET</span>
+            <span class="value" id="hud-target-name">ENVISAT (NORAD 27386)</span>
+          </div>
+          <div class="hud-stat-box">
+            <span class="label">ALTITUDE</span>
+            <span class="value" id="hud-target-alt">768.0 km</span>
+          </div>
+          <div class="hud-stat-box">
+            <span class="label">VELOCITY</span>
+            <span class="value" id="hud-target-speed">7.46 km/s</span>
+          </div>
+          <div class="hud-stat-box">
+            <span class="label">ESTIMATED MASS</span>
+            <span class="value" id="hud-target-mass">8,211 kg</span>
+          </div>
+          <div class="hud-stat-box critical">
+            <span class="label">CRITICALITY SCORE</span>
+            <span class="value" id="hud-target-criticality">92.4 / 100</span>
+          </div>
+        </div>
+
+        <!-- 3D Camera & Layer Controls -->
+        <div class="viewport-hud-bottom">
+          <button class="hud-btn active" id="btn-toggle-orbits">Toggle Orbits</button>
+          <button class="hud-btn active" id="btn-toggle-point-nemo">Point Nemo SPOUA</button>
+          <button class="hud-btn" id="btn-reset-cam">Reset View</button>
+          <button class="hud-btn" id="btn-track-target">Follow Target</button>
+          <button class="hud-btn highlight" id="btn-propagate-hpop">Run HPOP Numerical</button>
+        </div>
+      </main>
+
+      <!-- Right Sidebar: Interactive Mission Planning Tabs -->
+      <aside class="sidebar-right">
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+          <button class="tab-btn active" data-tab="telemetry">TELEMETRY</button>
+          <button class="tab-btn" data-tab="disposal">DISPOSAL & DEMISE</button>
+          <button class="tab-btn" data-tab="fleet">FLEET OPTIMIZER</button>
+          <button class="tab-btn" data-tab="kessler">KESSLER SIM</button>
+        </div>
+
+        <!-- Tab 1: Telemetry Inspector -->
+        <div class="tab-content active" id="tab-telemetry">
+          <div class="panel-section">
+            <h3>INSTANTANEOUS STATE VECTOR (ECI / J2000)</h3>
+            <div class="telemetry-grid">
+              <div class="telemetry-item">
+                <span class="lbl">Pos X (km)</span>
+                <span class="val" id="tel-pos-x">--</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="lbl">Pos Y (km)</span>
+                <span class="val" id="tel-pos-y">--</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="lbl">Pos Z (km)</span>
+                <span class="val" id="tel-pos-z">--</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="lbl">Vel Vx (km/s)</span>
+                <span class="val" id="tel-vel-x">--</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="lbl">Vel Vy (km/s)</span>
+                <span class="val" id="tel-vel-y">--</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="lbl">Vel Vz (km/s)</span>
+                <span class="val" id="tel-vel-z">--</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <h3>KEPLERIAN ORBITAL ELEMENTS</h3>
+            <div class="telemetry-grid">
+              <div class="telemetry-item">
+                <span class="lbl">Semi-Major Axis</span>
+                <span class="val" id="tel-sma">7146.1 km</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="lbl">Eccentricity</span>
+                <span class="val" id="tel-ecc">0.00010</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="lbl">Inclination</span>
+                <span class="val" id="tel-inc">98.54°</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="lbl">RAAN (Ω)</span>
+                <span class="val" id="tel-raan">45.00°</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="lbl">J2 Nodal Precession</span>
+                <span class="val highlight" id="tel-raan-drift">+0.985 °/day</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="lbl">Period</span>
+                <span class="val" id="tel-period">100.2 min</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <h3>DATA REALITY & CHARACTERIZATION</h3>
+            <div class="callout-note">
+              <strong>Data Schema Notice:</strong> Orbit & B* derived from mean TLE. Mass, RCS & Material inventory estimated via NASA Standard Breakup statistical power laws.
+            </div>
+            <div class="telemetry-grid">
+              <div class="telemetry-item">
+                <span class="lbl">Ballistic Coeff (B)</span>
+                <span class="val" id="tel-ballistic">143.5 kg/m²</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="lbl">Cross-Section Area</span>
+                <span class="val" id="tel-area">26.0 m²</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="lbl">Radar Cross Section</span>
+                <span class="val" id="tel-rcs">31.2 m²</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="lbl">Annual Coll. Prob</span>
+                <span class="val" id="tel-pcoll">1.24e-4</span>
+              </div>
+            </div>
+            <div class="material-bar-container">
+              <span class="lbl">Material Composition Breakdown</span>
+              <div class="material-stacked-bar" id="material-bar"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Disposal Physics & Demise -->
+        <div class="tab-content" id="tab-disposal">
+          <div class="panel-section">
+            <h3>AUTONOMOUS DISPOSAL DECISION ENGINE</h3>
+            <div class="decision-badge-container">
+              <div class="decision-card" id="card-decision">
+                <span class="decision-title">MANDATORY POINT NEMO TARGETED REENTRY</span>
+                <p class="decision-reason">Object contains refractory Titanium and Stainless Steel components with high ground kinetic energy survival probability.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <h3>AEROTHERMAL DEMISE ANALYSIS (FAY-RIDDELL MODEL)</h3>
+            <div class="chart-container">
+              <canvas id="demise-chart"></canvas>
+            </div>
+            <div class="telemetry-grid mini">
+              <div class="telemetry-item">
+                <span class="lbl">Peak Heat Flux</span>
+                <span class="val" id="demise-peak-flux">2.45 MW/m²</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="lbl">Breakup Altitude</span>
+                <span class="val" id="demise-breakup-alt">78.0 km</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="lbl">Mass Survived</span>
+                <span class="val" id="demise-survived-mass">1,420 kg (17.3%)</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="lbl">Casualty Area</span>
+                <span class="val alert" id="demise-casualty-area">14.8 m² (>8m² limit)</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <h3>POINT NEMO (SPOUA) DEORBIT BURN SOLUTION</h3>
+            <div class="telemetry-grid">
+              <div class="telemetry-item">
+                <span class="lbl">Required Δv</span>
+                <span class="val highlight" id="nemo-dv">218.4 m/s</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="lbl">Propellant Mass</span>
+                <span class="val" id="nemo-prop">612.8 kg</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="lbl">Target Flight Path (γ)</span>
+                <span class="val" id="nemo-gamma">-2.85°</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="lbl">3σ Footprint</span>
+                <span class="val" id="nemo-ellipse">480 × 45 km</span>
+              </div>
+            </div>
+            <button class="action-btn" id="btn-execute-deorbit-sim">Compute High-Precision Reentry Trajectory</button>
+          </div>
+        </div>
+
+        <!-- Tab 3: Fleet Mission Planner (Centerpiece) -->
+        <div class="tab-content" id="tab-fleet">
+          <div class="panel-section">
+            <h3>ORBITAL VRP FLEET SIZING OPTIMIZER</h3>
+            <p class="section-desc">Solves non-coplanar multi-target rendezvous by exploiting Earth $J_2$ nodal precession drift ($\dot{\Omega}$) to calculate minimum robots needed ($K_{min}$).</p>
+            
+            <div class="fleet-input-row">
+              <div class="input-group">
+                <label>Top Targets to Clean</label>
+                <input type="number" id="inp-fleet-targets" value="15" min="3" max="50" />
+              </div>
+              <div class="input-group">
+                <label>Chaser Propellant (kg)</label>
+                <input type="number" id="inp-fleet-prop" value="800" min="200" max="2000" />
+              </div>
+            </div>
+
+            <button class="action-btn highlight" id="btn-run-fleet-optimizer">Optimize Minimum Robot Fleet Size (K_min)</button>
+          </div>
+
+          <div class="panel-section" id="fleet-results-section">
+            <h3>OPTIMIZED FLEET ALLOCATION</h3>
+            <div class="fleet-kpi-grid">
+              <div class="kpi-box highlight">
+                <span class="kpi-val" id="fleet-kmin">3 ROBOTS</span>
+                <span class="kpi-lbl">MINIMUM FLEET SIZED</span>
+              </div>
+              <div class="kpi-box">
+                <span class="kpi-val" id="fleet-savings">78.5%</span>
+                <span class="kpi-lbl">J2 PROPELLANT SAVED</span>
+              </div>
+              <div class="kpi-box">
+                <span class="kpi-val" id="fleet-duration">480 DAYS</span>
+                <span class="kpi-lbl">MISSION TIMELINE</span>
+              </div>
+            </div>
+
+            <div class="robot-itinerary-list" id="robot-itinerary-list">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 4: Kessler Cascade Simulator -->
+        <div class="tab-content" id="tab-kessler">
+          <div class="panel-section">
+            <h3>30-YEAR KESSLER SYNDROME PROJECTION</h3>
+            <p class="section-desc">Coupled differential population dynamics comparing unmitigated growth versus Active Debris Removal stabilization.</p>
+
+            <div class="kessler-controls">
+              <div class="slider-row">
+                <label>ADR Removal Rate: <strong id="lbl-adr-rate">10 targets / year</strong></label>
+                <input type="range" id="slider-adr-rate" min="0" max="25" value="10" step="1" />
+              </div>
+            </div>
+
+            <div class="chart-container large">
+              <canvas id="kessler-chart"></canvas>
+            </div>
+
+            <div class="kessler-summary-box">
+              <div class="summary-item">
+                <span class="lbl">30-Year Collision Reduction</span>
+                <span class="val green" id="kessler-reduction">-74.2% Risk</span>
+              </div>
+              <div class="summary-item">
+                <span class="lbl">Orbital Status</span>
+                <span class="val green" id="kessler-verdict">STABILIZED SUSTAINABLE</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/static/visualizer3d.js"></script>
+  <script src="/static/dashboard_components.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
