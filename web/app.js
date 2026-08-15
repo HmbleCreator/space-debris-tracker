@@ -193,7 +193,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       dashboard.updateDemiseData(demData);
 
-      // 2. Point Nemo Deorbit Targeter Call
+      // 2. Ion Beam Shepherd (IBS) Contactless Deorbit Evaluation
+      await evaluateIBS(noradId);
+
+      // 3. Point Nemo Deorbit Targeter Call
       const nemoRes = await fetch('/api/reentry/point_nemo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -209,6 +212,51 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('Disposal evaluation error:', err);
     }
   }
+
+  async function evaluateIBS(noradId) {
+    if (!noradId && selectedObject) noradId = selectedObject.norad_id;
+    if (!noradId) return;
+
+    const standoff = parseFloat(document.getElementById('slider-ibs-standoff').value) || 20.0;
+    const thrust = parseFloat(document.getElementById('slider-ibs-thrust').value) || 200.0;
+
+    document.getElementById('val-ibs-standoff').textContent = `${standoff.toFixed(1)} m`;
+    document.getElementById('val-ibs-thrust').textContent = `${thrust.toFixed(0)} mN`;
+
+    try {
+      const res = await fetch('/api/reentry/ion_beam_shepherd', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          norad_id: noradId,
+          standoff_distance_m: standoff,
+          beam_thrust_mn: thrust
+        })
+      });
+      const data = await res.json();
+
+      document.getElementById('ibs-eta').textContent = `${data.flux_interception_efficiency_percent}%`;
+      document.getElementById('ibs-net-push').textContent = `${data.net_target_push_force_mn} mN`;
+      document.getElementById('ibs-recoil').textContent = `${data.station_keeping_compensation_force_mn} mN`;
+      document.getElementById('ibs-dwell-days').textContent = `${data.deorbit_dwell_duration_days} Days`;
+      document.getElementById('ibs-daily-prop').textContent = `${data.daily_propellant_consumption_kg_day} kg/day`;
+      document.getElementById('ibs-total-prop').textContent = `${data.total_chaser_propellant_used_kg} kg`;
+    } catch (err) {
+      console.error('IBS evaluation error:', err);
+    }
+  }
+
+  document.getElementById('slider-ibs-standoff').addEventListener('input', () => {
+    document.getElementById('val-ibs-standoff').textContent = `${parseFloat(document.getElementById('slider-ibs-standoff').value).toFixed(1)} m`;
+  });
+  document.getElementById('slider-ibs-standoff').addEventListener('change', () => evaluateIBS());
+
+  document.getElementById('slider-ibs-thrust').addEventListener('input', () => {
+    document.getElementById('val-ibs-thrust').textContent = `${parseFloat(document.getElementById('slider-ibs-thrust').value).toFixed(0)} mN`;
+  });
+  document.getElementById('slider-ibs-thrust').addEventListener('change', () => evaluateIBS());
+
+  document.getElementById('btn-compute-ibs-dwell').addEventListener('click', () => evaluateIBS());
 
   // -------------------------------------------------------------------------
   // 5. Fleet Optimizer Trigger

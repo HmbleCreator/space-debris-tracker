@@ -109,3 +109,22 @@ def test_api_point_nemo_targeter():
             assert data["delta_v_ms"] > 0
             assert data["is_contained_in_spoua_polygon"] is True
     _run_async(_test())
+
+
+def test_api_ion_beam_shepherd():
+    """Verify Ion Beam Shepherd contactless deorbit calculation endpoint."""
+    async def _test():
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            res = await client.post("/api/reentry/ion_beam_shepherd", json={
+                "norad_id": 27386,  # ENVISAT
+                "standoff_distance_m": 25.0,
+                "beam_thrust_mn": 250.0
+            })
+            assert res.status_code == 200
+            data = res.json()
+            assert data["target_name"] == "ENVISAT"
+            assert data["flux_interception_efficiency_percent"] > 50.0
+            assert data["chaser_recoil_force_mn"] == data["station_keeping_compensation_force_mn"] == 250.0
+            assert data["deorbit_dwell_duration_days"] > 0
+            assert data["tumbling_immunity_flag"] is True
+    _run_async(_test())

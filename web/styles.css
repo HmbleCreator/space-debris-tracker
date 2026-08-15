@@ -558,6 +558,39 @@ body {
   margin-bottom: 10px;
 }
 
+.ibs-control-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.slider-group {
+  background: var(--bg-primary);
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.slider-group label {
+  display: block;
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  margin-bottom: 4px;
+}
+
+.slider-group label span {
+  color: var(--accent-cyan);
+  font-weight: 700;
+}
+
+.slider-group input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent-cyan);
+  cursor: pointer;
+}
+
 .material-bar-container {
   margin-top: 10px;
 }

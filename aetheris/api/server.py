@@ -31,6 +31,7 @@ from aetheris.risk.kessler_simulator import KesslerCascadeSimulator
 from aetheris.api.schemas import (
     AerothermalReentryRequest,
     FleetOptimizationRequest,
+    IonBeamShepherdRequest,
     J2DriftRequest,
     KesslerSimRequest,
     ObjectQueryRequest,
@@ -275,18 +276,20 @@ async def optimize_j2_drift(req: J2DriftRequest):
 @app.post("/api/fleet/optimize")
 async def optimize_fleet_mission(req: FleetOptimizationRequest):
     """
-    Solve for the minimum number of robotic chasers (K_min) and multi-target cleanup tours.
+    Solve Throughput-Constrained VRP for the minimum number of Ion Beam Shepherd servicers (K_min).
     """
     all_objs = list(catalog_mgr.objects.values())
     top_targets = sorted(all_objs, key=lambda o: o.criticality_score, reverse=True)[:req.top_n_critical_targets]
 
     spec = RobotSpacecraftSpec(
-        robot_id="ADR-SERVICER",
-        robot_name="Aetheris Servicer",
+        robot_id="IBS-SERVICER",
+        robot_name="Aetheris Ion Beam Servicer",
         dry_mass_kg=req.chaser_dry_mass_kg,
         propellant_capacity_kg=req.chaser_propellant_capacity_kg,
-        specific_impulse_sec=req.chaser_isp_seconds,
-        capture_kit_payload_capacity=req.capture_kit_capacity
+        beam_thrust_n=req.beam_thrust_n,
+        beam_isp_sec=req.beam_isp_seconds,
+        nominal_standoff_distance_m=req.nominal_standoff_distance_m,
+        max_targets_per_robot=req.max_targets_per_robot
     )
 
     optimizer = FleetMissionOptimizer(robot_spec=spec)
@@ -303,7 +306,9 @@ async def optimize_fleet_mission(req: FleetOptimizationRequest):
             "fleet_total_propellant_used_kg": result.fleet_total_propellant_used_kg,
             "fleet_total_delta_v_ms": result.fleet_total_delta_v_ms,
             "mean_mission_duration_days": result.mean_mission_duration_days,
-            "average_propellant_savings_percent": result.average_propellant_savings_vs_direct_pct
+            "fleet_total_dwell_days": result.fleet_total_dwell_days,
+            "average_propellant_savings_percent": result.average_propellant_savings_vs_direct_pct,
+            "operational_regime": result.operational_regime
         },
         "robots": [
             {
@@ -316,6 +321,7 @@ async def optimize_fleet_mission(req: FleetOptimizationRequest):
                 "final_remaining_propellant_kg": r.final_remaining_propellant_kg,
                 "total_mission_duration_days": r.total_mission_duration_days,
                 "fuel_margin_percent": r.fuel_margin_percent,
+                "total_dwell_days": r.total_dwell_days,
                 "legs": [
                     {
                         "leg_index": l.leg_index,
@@ -335,6 +341,58 @@ async def optimize_fleet_mission(req: FleetOptimizationRequest):
             for r in result.robot_itineraries
         ],
         "unserviced_targets": result.unserviced_targets
+    }
+
+
+@app.post("/api/reentry/ion_beam_shepherd")
+async def compute_ion_beam_shepherd_deorbit(req: IonBeamShepherdRequest):
+    """
+    Compute contactless Ion Beam Shepherd deorbit dwell time, momentum transfer efficiency,
+    and dual-thruster recoil compensation propellant budget.
+    """
+    from aetheris.disposal.ion_beam_shepherd import IonBeamShepherdEngine
+
+    obj = catalog_mgr.get_object(req.norad_id)
+    if not obj:
+        raise HTTPException(status_code=404, detail=f"NORAD ID {req.norad_id} not found.")
+
+    engine = IonBeamShepherdEngine(
+        beam_thrust_n=req.beam_thrust_mn / 1000.0,
+        beam_isp_sec=req.beam_isp_seconds,
+        station_keeping_isp_sec=req.station_keeping_isp_seconds
+    )
+
+    res = engine.compute_standoff_deorbit(
+        target_name=obj.name,
+        target_mass_kg=obj.estimated_mass_kg,
+        target_cross_section_m2=obj.cross_sectional_area_m2,
+        current_orbit=obj.keplerian,
+        standoff_distance_m=req.standoff_distance_m,
+        target_perigee_alt_km=req.target_perigee_km
+    )
+
+    return {
+        "target_name": res.target_name,
+        "target_mass_kg": res.target_mass_kg,
+        "target_cross_section_m2": res.target_cross_section_m2,
+        "standoff_distance_m": res.standoff_distance_m,
+        "beam_divergence_half_angle_deg": res.beam_divergence_half_angle_deg,
+        "beam_footprint_radius_m": res.beam_footprint_radius_m,
+        "flux_interception_efficiency_percent": res.flux_interception_efficiency_percent,
+        "nominal_beam_thrust_mn": res.nominal_beam_thrust_mn,
+        "net_target_push_force_mn": res.net_target_push_force_mn,
+        "chaser_recoil_force_mn": res.chaser_recoil_force_mn,
+        "station_keeping_compensation_force_mn": res.station_keeping_compensation_force_mn,
+        "delta_v_target_required_ms": res.delta_v_target_required_ms,
+        "deorbit_dwell_duration_days": res.deorbit_dwell_duration_days,
+        "daily_propellant_consumption_kg_day": res.daily_propellant_consumption_kg_day,
+        "beam_propellant_used_kg": res.beam_propellant_used_kg,
+        "station_keeping_propellant_used_kg": res.station_keeping_propellant_used_kg,
+        "total_chaser_propellant_used_kg": res.total_chaser_propellant_used_kg,
+        "target_perigee_altitude_km": res.target_perigee_altitude_km,
+        "operational_mode": res.operational_mode,
+        "tumbling_immunity_flag": res.tumbling_immunity_flag,
+        "zero_grapple_risk_flag": res.zero_grapple_risk_flag
     }
 
 

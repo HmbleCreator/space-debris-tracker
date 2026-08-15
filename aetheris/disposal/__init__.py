@@ -1,7 +1,11 @@
 """
-Autonomous Disposal, Reentry Physics & Point Nemo Targeting Package for AETHERIS-ADR.
+Autonomous Disposal, Deorbit Propulsion & Aerothermal Reentry Package for AETHERIS-ADR.
 """
 
+from aetheris.disposal.ion_beam_shepherd import (
+    IonBeamShepherdEngine,
+    IonBeamDeorbitResult
+)
 from aetheris.disposal.chaser_propulsion import (
     ChaserPropulsionEngine,
     ImpulsiveDeorbitResult,
@@ -19,6 +23,8 @@ from aetheris.disposal.point_nemo_targeter import (
 )
 
 __all__ = [
+    "IonBeamShepherdEngine",
+    "IonBeamDeorbitResult",
     "ChaserPropulsionEngine",
     "ImpulsiveDeorbitResult",
     "ElectricDeorbitResult",

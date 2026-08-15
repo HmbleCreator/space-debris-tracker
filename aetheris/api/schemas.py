@@ -28,12 +28,23 @@ class J2DriftRequest(BaseModel):
     max_drift_days: float = 60.0
 
 
+class IonBeamShepherdRequest(BaseModel):
+    norad_id: int
+    standoff_distance_m: float = Field(default=20.0, ge=5.0, le=100.0)
+    beam_thrust_mn: float = Field(default=200.0, ge=20.0, le=1000.0)
+    beam_isp_seconds: float = 3500.0
+    station_keeping_isp_seconds: float = 3500.0
+    target_perigee_km: float = 40.0
+
+
 class FleetOptimizationRequest(BaseModel):
     top_n_critical_targets: int = Field(default=15, ge=1, le=50)
-    chaser_dry_mass_kg: float = 600.0
-    chaser_propellant_capacity_kg: float = 800.0
-    chaser_isp_seconds: float = 325.0
-    capture_kit_capacity: int = 5
+    chaser_dry_mass_kg: float = 550.0
+    chaser_propellant_capacity_kg: float = 400.0
+    beam_thrust_n: float = 0.20
+    beam_isp_seconds: float = 3500.0
+    nominal_standoff_distance_m: float = 20.0
+    max_targets_per_robot: int = 8
     max_robots_allowed: int = 10
 
 

@@ -227,6 +227,52 @@
           </div>
 
           <div class="panel-section">
+            <h3>ION BEAM SHEPHERD (IBS) CONTACTLESS STANDOFF CONTROLLER</h3>
+            <div class="callout-note">
+              <strong>Zero-Capture Physics:</strong> Plasma beam pushes tumbling uncooperative debris with zero grapple risk. Dual-thruster system cancels chaser recoil force in real time ($F_{sk} = F_{beam}$).
+            </div>
+            
+            <div class="ibs-control-row">
+              <div class="slider-group">
+                <label>Standoff Distance (d): <span id="val-ibs-standoff">20.0 m</span></label>
+                <input type="range" id="slider-ibs-standoff" min="10" max="50" step="1" value="20" />
+              </div>
+              <div class="slider-group">
+                <label>Beam Thrust: <span id="val-ibs-thrust">200 mN</span></label>
+                <input type="range" id="slider-ibs-thrust" min="50" max="500" step="10" value="200" />
+              </div>
+            </div>
+
+            <div class="telemetry-grid">
+              <div class="telemetry-item">
+                <span class="lbl">Flux Intercept (η)</span>
+                <span class="val highlight" id="ibs-eta">84.8%</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="lbl">Net Target Push</span>
+                <span class="val" id="ibs-net-push">169.6 mN</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="lbl">Recoil Balance (Fsk)</span>
+                <span class="val" id="ibs-recoil">200.0 mN</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="lbl">Deorbit Dwell Time</span>
+                <span class="val highlight" id="ibs-dwell-days">57.5 Days</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="lbl">Daily Xenon Draw</span>
+                <span class="val" id="ibs-daily-prop">1.01 kg/day</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="lbl">Total Dwell Xenon</span>
+                <span class="val" id="ibs-total-prop">58.0 kg</span>
+              </div>
+            </div>
+            <button class="action-btn" id="btn-compute-ibs-dwell">Re-compute Contactless IBS Profile</button>
+          </div>
+
+          <div class="panel-section">
             <h3>AEROTHERMAL DEMISE ANALYSIS (FAY-RIDDELL MODEL)</h3>
             <div class="chart-container">
               <canvas id="demise-chart"></canvas>

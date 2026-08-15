@@ -93,11 +93,13 @@ def test_fleet_optimizer_sizing():
         targets.append(obj)
 
     spec = RobotSpacecraftSpec(
-        robot_id="ADR-TEST",
+        robot_id="IBS-TEST",
         robot_name="Aetheris Test Servicer",
-        dry_mass_kg=500.0,
-        propellant_capacity_kg=700.0,
-        capture_kit_payload_capacity=4
+        dry_mass_kg=550.0,
+        propellant_capacity_kg=400.0,
+        beam_thrust_n=0.20,
+        beam_isp_sec=3500.0,
+        max_targets_per_robot=4
     )
 
     optimizer = FleetMissionOptimizer(robot_spec=spec)
@@ -106,10 +108,12 @@ def test_fleet_optimizer_sizing():
     assert result.minimum_robots_needed >= 1
     assert result.total_targets_cleaned == len(targets)
     assert len(result.robot_itineraries) == result.minimum_robots_needed
+    assert result.fleet_total_dwell_days > 0.0
 
     for r in result.robot_itineraries:
         assert r.final_remaining_propellant_kg >= 0.0
         assert r.fuel_margin_percent >= 0.0
+        assert r.total_dwell_days > 0.0
 
 
 def test_benchmark_esa_e_deorbit_validation():

@@ -11,7 +11,66 @@ from aetheris.core.constants import POINT_NEMO_LAT_DEG, POINT_NEMO_LON_DEG, SPOU
 from aetheris.core.orbital_elements import KeplerianElements
 from aetheris.disposal.aerothermal_demise import AerothermalDemiseSimulator
 from aetheris.disposal.chaser_propulsion import ChaserPropulsionEngine
+from aetheris.disposal.ion_beam_shepherd import IonBeamShepherdEngine
 from aetheris.disposal.point_nemo_targeter import PointNemoTargeter, point_in_polygon
+
+
+def test_ion_beam_shepherd_divergence_efficiency():
+    """Verify Ion Beam Shepherd plume divergence footprint and flux interception efficiency."""
+    engine = IonBeamShepherdEngine(
+        beam_thrust_n=0.20,
+        beam_isp_sec=3500.0,
+        beam_divergence_half_angle_deg=12.0
+    )
+
+    # At 20m standoff distance for a 15 m^2 cross section target
+    r_beam = engine.compute_beam_footprint_radius(standoff_distance_m=20.0)
+    eta = engine.compute_flux_interception_efficiency(
+        standoff_distance_m=20.0,
+        target_cross_section_m2=15.0
+    )
+
+    assert 3.0 < r_beam < 6.0  # r_beam ~ 0.15 + 20 * tan(12°) ~ 4.40 m
+    assert 0.60 < eta < 0.95   # >60% flux intercepted
+
+
+def test_ion_beam_shepherd_recoil_and_dwell_budget():
+    """Verify IBS dual-thruster recoil cancellation and dwell time integration."""
+    engine = IonBeamShepherdEngine(
+        beam_thrust_n=0.20,
+        beam_isp_sec=3500.0,
+        station_keeping_isp_sec=3500.0
+    )
+
+    kepler = KeplerianElements(
+        semi_major_axis=6378137.0 + 800000.0,
+        eccentricity=0.001,
+        inclination=math.radians(71.0),
+        raan=0.0,
+        arg_of_perigee=0.0,
+        true_anomaly=0.0
+    )
+
+    res = engine.compute_standoff_deorbit(
+        target_name="SL-16 R/B",
+        target_mass_kg=4000.0,
+        target_cross_section_m2=25.0,
+        current_orbit=kepler,
+        standoff_distance_m=20.0,
+        target_perigee_alt_km=40.0
+    )
+
+    # 1. Verification of recoil cancellation
+    assert res.station_keeping_compensation_force_mn == res.chaser_recoil_force_mn == 200.0
+    assert res.net_target_push_force_mn > 0
+
+    # 2. Verification of realistic dwell duration (30-70 days for 4000 kg R/B at 200 mN)
+    assert 30.0 <= res.deorbit_dwell_duration_days <= 75.0
+
+    # 3. Propellant efficiency of high-Isp electric propulsion
+    assert res.daily_propellant_consumption_kg_day < 1.5
+    assert res.total_chaser_propellant_used_kg > 0
+    assert res.tumbling_immunity_flag is True
 
 
 def test_impulsive_retro_burn_calculation():

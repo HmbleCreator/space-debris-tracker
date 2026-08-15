@@ -185,27 +185,35 @@ class DashboardManager {
       
       let legsHtml = '';
       r.legs.forEach(leg => {
+        const isDwell = leg.action_type === 'ION_BEAM_DEORBIT_DWELL';
+        const badgeColor = isDwell ? '#b388ff' : '#00e5ff';
         legsHtml += `
-          <div class="leg-item">
-            <span>[Leg ${leg.leg_index}] ${leg.action_type}: <strong>${leg.target_name || 'Transit'}</strong></span>
-            <span style="float: right; color: var(--accent-cyan);">Δv=${leg.delta_v_ms} m/s (${leg.duration_days}d)</span>
+          <div class="leg-item" style="border-left: 3px solid ${badgeColor}; padding-left: 8px; margin-bottom: 6px;">
+            <span>[Leg ${leg.leg_index}] <strong style="color: ${badgeColor};">${leg.action_type}</strong>: <strong>${leg.target_name || 'Transit'}</strong></span>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">
+              ${leg.description} &bull; <span style="color: var(--accent-cyan);">Duration: ${leg.duration_days}d &bull; Propellant: ${leg.propellant_used_kg}kg</span>
+            </div>
           </div>
         `;
       });
 
       card.innerHTML = `
         <div class="robot-card-header">
-          <span>🚀 ${r.robot_name} (${r.robot_id})</span>
-          <span style="color: var(--accent-emerald);">${r.targets_removed_count} Targets Assigned</span>
+          <span>🛰️ ${r.robot_name} (${r.robot_id})</span>
+          <span style="color: var(--accent-emerald);">${r.targets_removed_count} Targets Shepherded</span>
         </div>
-        <div class="telemetry-grid mini" style="margin-bottom: 8px;">
+        <div class="telemetry-grid" style="margin-bottom: 8px;">
           <div class="telemetry-item">
-            <span class="lbl">Total Δv Expended</span>
-            <span class="val highlight">${r.total_delta_v_ms} m/s</span>
+            <span class="lbl">Total Mission Duration</span>
+            <span class="val highlight">${r.total_mission_duration_days} Days</span>
           </div>
           <div class="telemetry-item">
-            <span class="lbl">Fuel Margin</span>
-            <span class="val">${r.fuel_margin_percent}% (${r.final_remaining_propellant_kg} kg left)</span>
+            <span class="lbl">Beam Dwell Time</span>
+            <span class="val" style="color: #b388ff;">${r.total_dwell_days || 0} Days</span>
+          </div>
+          <div class="telemetry-item">
+            <span class="lbl">Xenon Margin</span>
+            <span class="val">${r.fuel_margin_percent}% (${r.final_remaining_propellant_kg}kg left)</span>
           </div>
         </div>
         <div class="legs-container">
