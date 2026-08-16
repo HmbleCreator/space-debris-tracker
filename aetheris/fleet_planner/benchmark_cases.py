@@ -35,13 +35,9 @@ class ESALiteratureCase:
 @dataclass(frozen=True)
 class CastronuovoLiteratureCase:
     study_name: str
-    target_name: str
-    target_altitude_km: float
-    target_inclination_deg: float
-    target_mass_kg: float
-    raan_separation_deg: float
-    published_mission_transfer_window_days_min: float # Multi-week operational transfer window [days]
-    published_mission_transfer_window_days_max: float
+    target_description: str
+    target_orbit_regime: str
+    published_annual_removal_rate: str # ~5 targets / year
     citation: str
     notes: str
 
@@ -81,15 +77,11 @@ LITERATURE_ESA_E_DEORBIT = ESALiteratureCase(
 # Case 2: Castronuovo Multi-Target ADR Analysis (Acta Astronautica 2011)
 LITERATURE_CASTRONUOVO_ADR = CastronuovoLiteratureCase(
     study_name="Castronuovo Multi-Target ADR Mission Analysis (Acta Astronautica 2011)",
-    target_name="Sun-Synchronous / High-Inclination LEO Upper Stage Cluster",
-    target_altitude_km=840.0,
-    target_inclination_deg=71.0,
-    target_mass_kg=9000.0,
-    raan_separation_deg=12.5,
-    published_mission_transfer_window_days_min=20.0,
-    published_mission_transfer_window_days_max=65.0,
+    target_description="41 Large Rocket Bodies in Sun-Synchronous Orbit (800-1000 km, ~98°)",
+    target_orbit_regime="Sun-Synchronous Orbit (SSO)",
+    published_annual_removal_rate="~5 targets / year using multi-target servicer",
     citation="Castronuovo, M. M. (2011). 'Active space debris removal: a preliminary mission analysis and design'. Acta Astronautica, 69(9-10), 848-859. DOI: 10.1016/j.actaastro.2011.04.017",
-    notes="Castronuovo's multi-target mission design evaluates nodal precession drift to connect non-coplanar Sun-synchronous targets within a multi-week transfer window per object."
+    notes="Castronuovo proposes a multi-target servicer architecture deploying deorbit kits to ~5 SSO objects/year, exploiting orbital phasing and perturbation drift to avoid prohibitive direct out-of-plane delta-V costs."
 )
 
 # Case 3: Bombardelli & Peláez (2011) JGCD / arXiv:1102.1289 Section V
