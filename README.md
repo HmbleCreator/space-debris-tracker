@@ -12,7 +12,7 @@ A modular, high-fidelity astrodynamics simulation, risk mitigation, and autonomo
 |                                    AETHERIS-ADR SYSTEM ARCHITECTURE                                |
 +----------------------------------------------------------------------------------------------------+
 |                                                                                                    |
-|  [LAYER 1: ORBITAL RISK & EPHEMERIS ENGINE]                                                         |
+|  [LAYER 1: ORBITAL RISK & EPHEMERIS ENGINE]                                                        |
 |  - Ingestion: Mean orbital elements & B* from TLE / synthetic populations                          |
 |  - Fast Vectorized SGP4/J2 Secular Propagator (<1ms latency)                                       |
 |  - High-Precision Numerical Propagator (HPOP / Cowell RK45 with J2-J6, NRLMSISE-00 drag, SRP)      |
@@ -20,7 +20,7 @@ A modular, high-fidelity astrodynamics simulation, risk mitigation, and autonomo
 |  - Multi-Decade Kessler Cascade Population Dynamics Simulator                                      |
 |                                                                                                    |
 |  [LAYER 2: AUTONOMOUS FLEET MISSION PLANNER (CENTERPIECE)]                                         |
-|  - Non-Coplanar Rendezvous Delta-V Budget (Altitude + Plane Change + Phasing)                       |
+|  - Non-Coplanar Rendezvous Delta-V Budget (Altitude + Plane Change + Phasing)                      |
 |  - J2 Earth Oblateness Nodal Precession Drift Optimization (dOmega/dt)                             |
 |  - Solves for Minimum Robots (K_min), Target Sequencing, and Tsiolkovsky Propellant Depletion      |
 |  - Yields 70-90% Propellant Savings over direct impulsive plane changes                            |
@@ -28,7 +28,7 @@ A modular, high-fidelity astrodynamics simulation, risk mitigation, and autonomo
 |  [LAYER 3: AUTONOMOUS DISPOSAL & REENTRY PHYSICS]                                                  |
 |  - Chaser Propulsion Engine: Impulsive Retro-Burn vs. Continuous Low-Thrust Ion Spiral             |
 |  - Aerothermal Demise Simulator: Detra-Kemp-Riddell / Fay-Riddell Stagnation Heat Flux             |
-|  - Multi-Material Thermal Demise & Ablation Tracking (Al 6061/7075, Ti-6Al-4V, SS 304, CFRP)     |
+|  - Multi-Material Thermal Demise & Ablation Tracking (Al 6061/7075, Ti-6Al-4V, SS 304, CFRP)       |
 |  - Autonomous Decision: Safe Atmospheric Demise vs. Controlled Point Nemo (SPOUA) Targeting        |
 |  - 3-Sigma Ground Impact Dispersion Ellipse Contained within SPOUA Maritime Corridor               |
 |                                                                                                    |
